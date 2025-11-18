@@ -209,7 +209,9 @@ bot.run(TOKEN)
 import threading
 
 def run_web():
-    app.run(host='0.0.0.0', port=10000)
+    import os
+PORT = int(os.getenv("PORT", 10000))
+app.run(host='0.0.0.0', port=PORT)
 
 web_thread = threading.Thread(target=run_web)
 web_thread.start()
