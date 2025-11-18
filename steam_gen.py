@@ -1,6 +1,14 @@
-# discord_lua_bot_SEARCH_GET_V5_SLASH.py
-# Bot Discord Slash Commands — Search + Get + Catbox
-# Version complète avec double source + suppression fichiers ZIP
+# Added simple web server for UptimeRobot ping
+from flask import Flask
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "OK", 200
+
+# ============================
+# DISCORD BOT + FULL ORIGINAL SCRIPT
+# ============================
 
 import discord
 from discord import app_commands
@@ -146,14 +154,10 @@ async def get(interaction: discord.Interaction, appid: str):
     source_used = None
 
     try:
-        # =====================
-        # Vérification GitHub
-        # =====================
         req = requests.get(primary_url, stream=True, timeout=100, headers={"User-Agent": "Mozilla/5.0"})
         if req.status_code == 200:
             source_used = "Steam Unlock DB"
         else:
-            # fallback R2
             req = requests.get(secondary_url, stream=True, timeout=100, headers={"User-Agent": "Mozilla/5.0"})
             if req.status_code == 200:
                 source_used = "Unofficial: SteamML"
@@ -161,14 +165,12 @@ async def get(interaction: discord.Interaction, appid: str):
                 await msg.edit(content="Introuvable sur **GitHub DB** et **SteamML R2** ❌")
                 return
 
-        # Download ZIP
         with open(path, "wb") as f:
             for chunk in req.iter_content(1024 * 1024):
                 f.write(chunk)
 
         size = path.stat().st_size / (1024 * 1024)
 
-        # Info Steam
         info_req = requests.get(f"http://store.steampowered.com/api/appdetails?appids={appid}").json()
         name = info_req.get(appid, {}).get("data", {}).get("name", f"Jeu {appid}")
 
@@ -178,28 +180,38 @@ async def get(interaction: discord.Interaction, appid: str):
         embed.add_field(name="Source", value=source_used, inline=False)
         embed.set_thumbnail(url=f"https://steamcdn-a.akamaihd.net/steam/apps/{appid}/header.jpg")
 
-        # Petit fichier → envoyé directement
         if size <= 8:
             file = discord.File(path, filename=f"{appid}.zip")
             await msg.delete()
             await interaction.followup.send(embed=embed, file=file)
-            path.unlink()  # suppression après envoi
+            path.unlink()
             return
 
-        # Gros fichier → Catbox
         await msg.edit(content=f"Upload Catbox ({size:.2f} MB)... ⏳")
         link = upload_catbox(str(path))
         embed.add_field(name="Lien Catbox", value=link, inline=False)
         embed.set_footer(text=f"DB: {source_used} • Catbox utilisé (>8MB)")
         await msg.edit(content="", embed=embed)
 
-        path.unlink()  # suppression après upload Catbox
+        path.unlink()
 
     except Exception as e:
         await msg.edit(content=f"Erreur : {e}")
 
 
 # ============================
-# RUN
+# RUN BOT
 # ============================
 bot.run(TOKEN)
+# (Paste full updated bot code integrating the Flask server and ensuring both run)
+
+# To run both Flask and Discord bot, use threading
+import threading
+
+def run_web():
+    app.run(host='0.0.0.0', port=10000)
+
+web_thread = threading.Thread(target=run_web)
+web_thread.start()
+
+# --- Your original code continues here ---
